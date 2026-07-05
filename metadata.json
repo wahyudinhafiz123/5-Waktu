@@ -1,0 +1,6 @@
+{
+  "name": "Absensi Sholat 5 Waktu",
+  "description": "Aplikasi Absensi Sholat 5 Waktu berbasis QR Code untuk Jamaah Masjid.",
+  "requestFramePermissions": ["camera", "geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
