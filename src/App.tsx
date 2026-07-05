@@ -140,6 +140,117 @@ export default function App() {
     }
   };
 
+  // 5.5. Global Background Prayer Reminder Loop (Works across all active tabs/views)
+  useEffect(() => {
+    const timeToMinutes = (timeStr: string): number => {
+      const [h, m] = timeStr.split(':').map(Number);
+      if (isNaN(h) || isNaN(m)) return -1;
+      return h * 60 + m;
+    };
+
+    const playTone = () => {
+      // Check sound preference from localStorage (synced with NotificationManager toggle)
+      const soundEnabled = localStorage.getItem('sholat_notif_sound') !== 'false';
+      if (!soundEnabled) return;
+
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const playToneHarmonic = (freq: number, start: number, duration: number, volume = 0.15) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, start);
+          gain.gain.setValueAtTime(0, start);
+          gain.gain.linearRampToValueAtTime(volume, start + 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(start);
+          osc.stop(start + duration);
+        };
+
+        const now = audioCtx.currentTime;
+        playToneHarmonic(392.00, now, 1.2, 0.12);       // G4
+        playToneHarmonic(493.88, now + 0.15, 1.2, 0.12); // B4
+        playToneHarmonic(587.33, now + 0.3, 1.5, 0.15);  // D5
+        playToneHarmonic(783.99, now + 0.45, 1.8, 0.1);  // G5
+      } catch (e) {
+        console.error('Audio synthesis failed:', e);
+      }
+    };
+
+    const triggerNotification = (title: string, body: string) => {
+      if (!('Notification' in window)) return;
+      if (Notification.permission === 'granted') {
+        try {
+          const notif = new Notification(title, {
+            body,
+            icon: '/logo.jpg',
+            vibrate: [200, 100, 200]
+          } as any);
+          notif.onclick = () => window.focus();
+        } catch {
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(title, {
+                body,
+                icon: '/logo.jpg',
+                vibrate: [200, 100, 200]
+              } as any);
+            }).catch(() => {});
+          }
+        }
+      }
+    };
+
+    const checkSchedules = () => {
+      const now = new Date();
+      const currentMinutes = now.getHours() * 60 + now.getMinutes();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      settings.schedules.forEach((schedule) => {
+        const prayerMinutes = timeToMinutes(schedule.start);
+        if (prayerMinutes === -1) return;
+
+        const diff = prayerMinutes - currentMinutes;
+
+        if (diff === 5) {
+          const key = `notified_${todayStr}_${schedule.name}`;
+          const alreadyNotified = localStorage.getItem(key);
+
+          if (!alreadyNotified) {
+            localStorage.setItem(key, 'true');
+            playTone();
+            
+            const message = `5 menit lagi memasuki waktu sholat ${schedule.name}. Mari bersiap-siap menuju masjid.`;
+            triggerNotification(`Panggilan Sholat ${schedule.name}`, message);
+
+            // Sync with NotificationManager history log
+            try {
+              const savedHistory = localStorage.getItem('sholat_notif_history');
+              const history = savedHistory ? JSON.parse(savedHistory) : [];
+              const timestamp = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+              const newHistoryItem = {
+                time: timestamp,
+                message: `Pengingat Sholat ${schedule.name} terkirim.`,
+                prayer: schedule.name
+              };
+              const updated = [newHistoryItem, ...history].slice(0, 5);
+              localStorage.setItem('sholat_notif_history', JSON.stringify(updated));
+            } catch {}
+          }
+        }
+      });
+    };
+
+    // Check every 30 seconds
+    const interval = setInterval(checkSchedules, 30000);
+    return () => clearInterval(interval);
+  }, [settings.schedules]);
+
   // 6. DB operations bound to components
   const handleSaveSettings = (newSettings: AppSettings) => {
     saveLocalSettings(newSettings);
@@ -400,6 +511,7 @@ export default function App() {
                 <Dashboard 
                   jamaahList={jamaahList} 
                   absensiList={absensiList} 
+                  settings={settings}
                   onNavigateToScan={() => setActiveView('scan')} 
                 />
               )}

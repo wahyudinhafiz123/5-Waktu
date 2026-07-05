@@ -1,14 +1,16 @@
 import React, { useMemo } from 'react';
 import { Users, Scan, Sun, Moon, Sunrise, Sunset, Flame, CalendarRange, Clock, Sparkles } from 'lucide-react';
-import { Jamaah, Absensi, SholatType } from '../types';
+import { Jamaah, Absensi, SholatType, AppSettings } from '../types';
+import NotificationManager from './NotificationManager';
 
 interface DashboardProps {
   jamaahList: Jamaah[];
   absensiList: Absensi[];
+  settings: AppSettings;
   onNavigateToScan: () => void;
 }
 
-export default function Dashboard({ jamaahList, absensiList, onNavigateToScan }: DashboardProps) {
+export default function Dashboard({ jamaahList, absensiList, settings, onNavigateToScan }: DashboardProps) {
   // Get today's date in local YYYY-MM-DD format
   const todayStr = useMemo(() => {
     const d = new Date();
@@ -112,6 +114,9 @@ export default function Dashboard({ jamaahList, absensiList, onNavigateToScan }:
           </button>
         </div>
       </div>
+
+      {/* Notification Manager Component (5-minute prayer reminder controller) */}
+      <NotificationManager settings={settings} />
 
       {/* Stats Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
