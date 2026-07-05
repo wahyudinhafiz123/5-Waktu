@@ -8,7 +8,7 @@ import {
 import { Jamaah, Absensi, AppSettings } from './types';
 import { 
   getLocalSettings, saveLocalSettings, getJamaahList, saveJamaah, 
-  deleteJamaah, getAbsensiList, saveAbsensi 
+  deleteJamaah, getAbsensiList, saveAbsensi, getSettingsDb, saveSettingsDb 
 } from './lib/db';
 
 // Component Imports
@@ -124,6 +124,12 @@ export default function App() {
       const aList = await getAbsensiList();
       setJamaahList(jList);
       setAbsensiList(aList);
+      
+      // Load and sync settings from Supabase pengaturan table
+      const dbSettings = await getSettingsDb();
+      if (dbSettings) {
+        setSettings(dbSettings);
+      }
     } catch (e) {
       console.error('Failed to load database data:', e);
     } finally {
@@ -319,8 +325,8 @@ export default function App() {
   }, [settings.schedules]);
 
   // 6. DB operations bound to components
-  const handleSaveSettings = (newSettings: AppSettings) => {
-    saveLocalSettings(newSettings);
+  const handleSaveSettings = async (newSettings: AppSettings) => {
+    await saveSettingsDb(newSettings);
     setSettings(newSettings);
   };
 

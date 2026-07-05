@@ -185,6 +185,87 @@ export function saveLocalSettings(settings: AppSettings): void {
   supabaseClientInstance = null;
 }
 
+// -----------------------------------------
+// CLOUD SETTINGS SYNCHRONIZATION
+// -----------------------------------------
+
+export async function getSettingsDb(): Promise<AppSettings | null> {
+  const settings = getLocalSettings();
+  const client = getSupabase(settings.supabase);
+
+  if (client && settings.supabase.connected) {
+    try {
+      const { data, error } = await client.from('pengaturan').select('*').eq('id', 'default');
+      if (!error && data) {
+        if (data.length === 0) {
+          // Initialize Supabase row automatically if it's connected but empty
+          await saveSettingsDb(settings);
+          return settings;
+        }
+
+        const row = data[0];
+        // Parse the schedules safely
+        let schedules = settings.schedules;
+        if (row.schedules) {
+          try {
+            schedules = typeof row.schedules === 'string' ? JSON.parse(row.schedules) : row.schedules;
+          } catch {
+            schedules = row.schedules;
+          }
+        }
+
+        const dbSettings: AppSettings = {
+          masjid: {
+            nama_masjid: row.nama_masjid || settings.masjid.nama_masjid,
+            alamat: row.alamat || settings.masjid.alamat,
+            logo: row.logo || settings.masjid.logo,
+          },
+          schedules: Array.isArray(schedules) ? schedules : settings.schedules,
+          supabase: settings.supabase, // Keep local database connection credentials
+          durasi_telat: row.durasi_telat !== undefined ? row.durasi_telat : settings.durasi_telat
+        };
+        
+        // Keep LocalStorage in sync
+        localStorage.setItem('sholat_settings', JSON.stringify(dbSettings));
+        return dbSettings;
+      }
+      console.warn('Supabase settings load note (table might not exist yet):', error?.message);
+    } catch (err) {
+      console.error('Supabase exception loading settings:', err);
+    }
+  }
+  return null;
+}
+
+export async function saveSettingsDb(settings: AppSettings): Promise<boolean> {
+  // Always update locally first
+  saveLocalSettings(settings);
+
+  const client = getSupabase(settings.supabase);
+  if (client && settings.supabase.connected) {
+    try {
+      // Upsert the configuration row
+      const { error } = await client.from('pengaturan').upsert({
+        id: 'default',
+        nama_masjid: settings.masjid.nama_masjid,
+        alamat: settings.masjid.alamat,
+        logo: settings.masjid.logo,
+        schedules: settings.schedules, // Supabase can accept object/array for jsonb columns, or we can send as-is
+        durasi_telat: settings.durasi_telat
+      });
+      if (error) {
+        console.warn('Failed to sync settings to Supabase (check if pengaturan table is created):', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Supabase exception saving settings:', err);
+      return false;
+    }
+  }
+  return true;
+}
+
 // JAMA’AH FUNCTIONS
 export async function getJamaahList(): Promise<Jamaah[]> {
   const settings = getLocalSettings();

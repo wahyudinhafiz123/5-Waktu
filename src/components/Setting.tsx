@@ -397,7 +397,7 @@ export default function Setting({ settings, onSaveSettings, onRefreshData }: Set
             <p className="text-slate-400">
               Salin skrip ini dan jalankan di panel <strong>SQL Editor</strong> Supabase Anda untuk membuat struktur tabel yang sesuai:
             </p>
-            <pre className="p-3 bg-slate-100 dark:bg-slate-950 rounded-xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto select-all max-h-36">
+            <pre className="p-3 bg-slate-100 dark:bg-slate-950 rounded-xl text-[10px] font-mono text-slate-600 dark:text-slate-400 overflow-x-auto select-all max-h-48">
 {`-- Buat Tabel Jamaah
 CREATE TABLE jamaah (
   id TEXT PRIMARY KEY,
@@ -425,10 +425,36 @@ CREATE TABLE absensi (
   lokasi_gps TEXT
 );
 
+-- Buat Tabel Pengaturan Masjid & Organisasi
+CREATE TABLE pengaturan (
+  id TEXT PRIMARY KEY DEFAULT 'default',
+  nama_masjid TEXT,
+  alamat TEXT,
+  logo TEXT,
+  schedules JSONB,
+  durasi_telat INTEGER
+);
+
 -- Nonaktifkan RLS agar dapat diakses oleh client anonymous secara langsung
--- (Atau Anda juga dapat mengaktifkan RLS dan membuat kebijakan/policies SELECT/INSERT untuk role 'anon')
 ALTER TABLE jamaah DISABLE ROW LEVEL SECURITY;
-ALTER TABLE absensi DISABLE ROW LEVEL SECURITY;`}
+ALTER TABLE absensi DISABLE ROW LEVEL SECURITY;
+ALTER TABLE pengaturan DISABLE ROW LEVEL SECURITY;
+
+-- Untuk keamanan berlapis, buat juga kebijakan (Policies) agar aman jika RLS aktif:
+CREATE POLICY "Allow anon select on jamaah" ON jamaah FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert on jamaah" ON jamaah FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update on jamaah" ON jamaah FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anon delete on jamaah" ON jamaah FOR DELETE USING (true);
+
+CREATE POLICY "Allow anon select on absensi" ON absensi FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert on absensi" ON absensi FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update on absensi" ON absensi FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anon delete on absensi" ON absensi FOR DELETE USING (true);
+
+CREATE POLICY "Allow anon select on pengaturan" ON pengaturan FOR SELECT USING (true);
+CREATE POLICY "Allow anon insert on pengaturan" ON pengaturan FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow anon update on pengaturan" ON pengaturan FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow anon delete on pengaturan" ON pengaturan FOR DELETE USING (true);`}
             </pre>
           </div>
         </div>
