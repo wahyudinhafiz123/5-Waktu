@@ -62,6 +62,37 @@ export default function App() {
     };
   }, []);
 
+  // Sync schedules with Service Worker for background reminders when settings.schedules change
+  useEffect(() => {
+    const syncSchedules = () => {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SET_SCHEDULES',
+          schedules: settings.schedules
+        });
+      }
+    };
+
+    if ('serviceWorker' in navigator) {
+      // Sync immediately if controller exists
+      syncSchedules();
+
+      // Sync when controller activates/changes
+      navigator.serviceWorker.addEventListener('controllerchange', syncSchedules);
+
+      // Sync when service worker is ready
+      navigator.serviceWorker.ready.then((registration) => {
+        if (registration.active) {
+          registration.active.postMessage({
+            type: 'SET_SCHEDULES',
+            schedules: settings.schedules
+          });
+        }
+      });
+    }
+  }, [settings.schedules]);
+
+
   // 1. Initial Session & Theme Checker
   useEffect(() => {
     // Check Remember Login Session
