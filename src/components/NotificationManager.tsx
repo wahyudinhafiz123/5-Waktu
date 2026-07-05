@@ -163,6 +163,15 @@ export default function NotificationManager({ settings }: NotificationManagerPro
             const message = `5 menit lagi memasuki waktu sholat ${schedule.name}. Mari bersiap-siap menuju masjid.`;
             triggerLocalNotification(`Panggilan Sholat ${schedule.name}`, message);
 
+            // Dispatch in-app overlay message event
+            window.dispatchEvent(new CustomEvent('show-in-app-sholat-notif', {
+              detail: {
+                title: `Panggilan Sholat ${schedule.name}`,
+                body: message,
+                prayer: schedule.name
+              }
+            }));
+
             // Add to in-app history list
             const timestamp = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
             const newHistoryItem = {
@@ -198,6 +207,15 @@ export default function NotificationManager({ settings }: NotificationManagerPro
   const handleTestNotification = () => {
     playNotificationSound();
     triggerLocalNotification('Uji Coba Pengingat', 'Alhamdulillah, sistem pengingat sholat 5 menit berfungsi dengan baik!');
+    
+    // Dispatch in-app overlay message event
+    window.dispatchEvent(new CustomEvent('show-in-app-sholat-notif', {
+      detail: {
+        title: 'Uji Coba Pengingat',
+        body: 'Alhamdulillah, sistem pengingat sholat 5 menit berfungsi dengan baik!',
+        prayer: 'Test'
+      }
+    }));
     
     setTestSuccess(true);
     setTimeout(() => setTestSuccess(false), 3000);

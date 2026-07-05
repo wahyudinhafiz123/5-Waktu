@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, Scan, Users, History, Settings, LogOut, 
-  Sun, Moon, Menu, X, Shield, Sparkles, Clock, Calendar, CheckSquare
+  Sun, Moon, Menu, X, Shield, Sparkles, Clock, Calendar, CheckSquare,
+  Bell, MessageSquare
 } from 'lucide-react';
 
 import { Jamaah, Absensi, AppSettings } from './types';
@@ -34,6 +35,32 @@ export default function App() {
   // Live clock display in header
   const [currentTime, setCurrentTime] = useState<string>('');
   const [currentDate, setCurrentDate] = useState<string>('');
+
+  // Floating in-app message notification state
+  const [inAppNotif, setInAppNotif] = useState<{
+    title: string;
+    body: string;
+    prayer: string;
+  } | null>(null);
+
+  // Listener for custom in-app prayer reminder events
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    const handleCustomNotif = (e: any) => {
+      setInAppNotif(e.detail);
+      // Auto-dismiss after 10 seconds
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        setInAppNotif(null);
+      }, 10000);
+    };
+
+    window.addEventListener('show-in-app-sholat-notif', handleCustomNotif);
+    return () => {
+      window.removeEventListener('show-in-app-sholat-notif', handleCustomNotif);
+      clearTimeout(timer);
+    };
+  }, []);
 
   // 1. Initial Session & Theme Checker
   useEffect(() => {
@@ -225,8 +252,17 @@ export default function App() {
             localStorage.setItem(key, 'true');
             playTone();
             
-            const message = `5 menit lagi memasuki waktu sholat ${schedule.name}. Mari bersiap-siap menuju masjid.`;
-            triggerNotification(`Panggilan Sholat ${schedule.name}`, message);
+             const message = `5 menit lagi memasuki waktu sholat ${schedule.name}. Mari bersiap-siap menuju masjid.`;
+             triggerNotification(`Panggilan Sholat ${schedule.name}`, message);
+
+             // Dispatch in-app overlay message event
+             window.dispatchEvent(new CustomEvent('show-in-app-sholat-notif', {
+               detail: {
+                 title: `Panggilan Sholat ${schedule.name}`,
+                 body: message,
+                 prayer: schedule.name
+               }
+             }));
 
             // Sync with NotificationManager history log
             try {
@@ -574,6 +610,74 @@ export default function App() {
           );
         })}
       </nav>
+
+      {/* 6. FLOATING IN-APP CHAT/MESSAGE NOTIFICATION POPUP */}
+      {inAppNotif && (
+        <div className="fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-[400px] z-[9999] animate-in slide-in-from-top-12 duration-300">
+          <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-4 rounded-2xl shadow-2xl flex items-start gap-3.5 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
+            {/* Top decorative bar */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 to-brand-500" />
+            
+            {/* Round avatar / mosque logo */}
+            <div className="relative flex-shrink-0">
+              <img 
+                src="/logo.jpg" 
+                alt="Logo Masjid" 
+                className="w-11 h-11 rounded-full object-cover border-2 border-brand-100 dark:border-brand-900/50"
+                referrerPolicy="no-referrer"
+              />
+              <div className="absolute -bottom-1 -right-1 bg-brand-500 text-white p-0.5 rounded-full border-2 border-white dark:border-slate-900">
+                <Bell className="w-2.5 h-2.5" />
+              </div>
+            </div>
+
+            {/* Notification content */}
+            <div className="flex-1 min-w-0 pr-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-100 block font-display">
+                  PENGINGAT MASJID
+                </span>
+                <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 font-mono tracking-wider">
+                  BARU SAJA
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-brand-600 dark:text-brand-400 mt-0.5 font-sans">
+                {inAppNotif.title}
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-300 mt-1 leading-relaxed font-medium">
+                {inAppNotif.body}
+              </p>
+              
+              {/* Interactive buttons */}
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={() => {
+                    setInAppNotif(null);
+                    setActiveView('dashboard');
+                  }}
+                  className="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 active:scale-95 text-white rounded-lg text-[10px] font-bold shadow-sm transition-all cursor-pointer"
+                >
+                  Buka Dashboard
+                </button>
+                <button
+                  onClick={() => setInAppNotif(null)}
+                  className="px-3 py-1.5 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 active:scale-95 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-semibold border border-slate-200/60 dark:border-slate-700 transition-all cursor-pointer"
+                >
+                  Tutup
+                </button>
+              </div>
+            </div>
+
+            {/* Slide-out close button */}
+            <button
+              onClick={() => setInAppNotif(null)}
+              className="absolute top-3 right-3 text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );
