@@ -6,6 +6,9 @@ import {
 import { AppSettings, SholatSchedule } from '../types';
 import { testSupabaseConnection, exportBackupData, restoreBackupData } from '../lib/db';
 
+const envSupabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL as string) || '';
+const envSupabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) || '';
+
 interface SettingProps {
   settings: AppSettings;
   onSaveSettings: (settings: AppSettings) => void;
@@ -328,6 +331,18 @@ export default function Setting({ settings, onSaveSettings, onRefreshData }: Set
           </p>
 
           <div className="space-y-3">
+            {envSupabaseUrl && envSupabaseAnonKey && (
+              <div className="p-3 text-xs rounded-xl flex items-start gap-2 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30">
+                <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-500" />
+                <div>
+                  <span className="font-bold block">Terhubung Otomatis via Vercel!</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-0.5 leading-relaxed">
+                    Kredensial Supabase terdeteksi dari environment variables Vercel dan langsung digunakan secara otomatis. Anda tidak perlu memasukkannya secara manual di bawah.
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1">Supabase URL</label>
               <input
@@ -408,7 +423,12 @@ CREATE TABLE absensi (
   status TEXT,
   device TEXT,
   lokasi_gps TEXT
-);`}
+);
+
+-- Nonaktifkan RLS agar dapat diakses oleh client anonymous secara langsung
+-- (Atau Anda juga dapat mengaktifkan RLS dan membuat kebijakan/policies SELECT/INSERT untuk role 'anon')
+ALTER TABLE jamaah DISABLE ROW LEVEL SECURITY;
+ALTER TABLE absensi DISABLE ROW LEVEL SECURITY;`}
             </pre>
           </div>
         </div>

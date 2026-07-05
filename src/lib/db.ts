@@ -10,6 +10,9 @@ const DEFAULT_SCHEDULES: SholatSchedule[] = [
   { name: 'Isya', start: '19:00', end: '23:59' },
 ];
 
+const envSupabaseUrl = ((import.meta as any).env?.VITE_SUPABASE_URL as string) || '';
+const envSupabaseAnonKey = ((import.meta as any).env?.VITE_SUPABASE_ANON_KEY as string) || '';
+
 const DEFAULT_SETTINGS: AppSettings = {
   masjid: {
     nama_masjid: 'Masjid Agung Al-Ikhlas',
@@ -18,9 +21,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   },
   schedules: DEFAULT_SCHEDULES,
   supabase: {
-    url: '',
-    anonKey: '',
-    connected: false,
+    url: envSupabaseUrl,
+    anonKey: envSupabaseAnonKey,
+    connected: !!(envSupabaseUrl && envSupabaseAnonKey),
   },
   durasi_telat: 15
 };
@@ -161,6 +164,14 @@ export function getLocalSettings(): AppSettings {
     const parsed = JSON.parse(data);
     if (parsed.durasi_telat === undefined) {
       parsed.durasi_telat = 15;
+    }
+    // If environmental variables are present (e.g. deployed on Vercel), force connect directly
+    if (envSupabaseUrl && envSupabaseAnonKey) {
+      parsed.supabase = {
+        url: envSupabaseUrl,
+        anonKey: envSupabaseAnonKey,
+        connected: true
+      };
     }
     return parsed;
   } catch {
